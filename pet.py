@@ -117,29 +117,29 @@ class DesktopPet(QLabel):
 
     def mousePressEvent(self, event):
 
-        if event.button() == Qt.LeftButton:
+     if event.button() == Qt.LeftButton:
 
-            # 更新互動時間
-            self.lastInteraction = time.time()
+        # 更新最後互動時間
+        self.lastInteraction = time.time()
 
-            # 醒來
-            if self.isSleeping:
-                self.isSleeping = False
-                self.animation.breathe()
+        # 如果睡著，先醒來
+        if self.isSleeping:
+            self.isSleeping = False
+            self.animation.breathe()
 
-            # 拖曳起點
-            self.dragPos = (
-                event.globalPosition().toPoint()
-                - self.frameGeometry().topLeft()
-            )
+        # 記錄滑鼠按下位置
+        self.dragPos = (
+            event.globalPosition().toPoint()
+            - self.frameGeometry().topLeft()
+        )
 
-            # 動畫
-            self.animation.jump()
+        # 記錄按下時間
+        self.pressTime = time.time()
 
-            # 說話
-            self.say()
+        # 是否已拖曳
+        self.dragging = False
 
-        super().mousePressEvent(event)
+     super().mousePressEvent(event)
 
     # ----------------------
     # 拖曳
@@ -147,23 +147,31 @@ class DesktopPet(QLabel):
 
     def mouseMoveEvent(self, event):
 
-        if event.buttons() & Qt.LeftButton:
+     if event.buttons() & Qt.LeftButton:
 
-            self.move(
-                event.globalPosition().toPoint()
-                - self.dragPos
-            )
+        self.dragging = True
 
+        self.move(
+            event.globalPosition().toPoint()
+            - self.dragPos
+        )
     # ----------------------
     # 放開滑鼠
     # ----------------------
 
     def mouseReleaseEvent(self, event):
 
-        self.data["x"] = self.x()
-        self.data["y"] = self.y()
+    # 如果沒有拖曳，就當成點一下
+     if not self.dragging:
 
-        config.save(self.data)
+        self.animation.jump()
+
+        self.say()
+
+     self.data["x"] = self.x()
+     self.data["y"] = self.y()
+
+     config.save(self.data)
 
     # ----------------------
     # 滾輪縮放
