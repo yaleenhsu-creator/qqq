@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QLabel,
-    QMenu
+    QMenu,
+    QApplication
 )
 
 from PySide6.QtGui import (
@@ -10,10 +11,12 @@ from PySide6.QtGui import (
 
 from PySide6.QtCore import (
     Qt,
-    QPoint
+    QPoint,
+    QTimer
 )
 
 import random
+import time
 
 import config
 from bubble import Bubble
@@ -25,12 +28,11 @@ class DesktopPet(QLabel):
     def __init__(self):
         super().__init__()
 
-        # 讀取設定
+        # 設定
         self.data = config.load()
-
         self.scale = self.data["scale"]
 
-        # 原始圖片
+        # 圖片
         self.original = QPixmap("pet.png")
 
         # 泡泡
@@ -41,6 +43,10 @@ class DesktopPet(QLabel):
 
         # 拖曳
         self.dragPos = QPoint()
+
+        # 睡覺
+        self.lastInteraction = time.time()
+        self.isSleeping = False
 
         # 台詞
         self.messages = [
@@ -71,7 +77,22 @@ class DesktopPet(QLabel):
             self.data["y"]
         )
 
-            # ----------------------
+        # 呼吸動畫
+        self.breatheTimer = QTimer()
+        self.breatheTimer.timeout.connect(
+            self.animation.breathe
+        )
+        self.breatheTimer.start(3600)
+        self.animation.breathe()
+
+        # 睡覺檢查
+        self.sleepTimer = QTimer()
+        self.sleepTimer.timeout.connect(
+            self.checkSleep
+        )
+        self.sleepTimer.start(1000)
+
+    # ----------------------
     # 更新圖片
     # ----------------------
 
@@ -89,18 +110,40 @@ class DesktopPet(QLabel):
         self.setPixmap(pix)
         self.adjustSize()
 
-    # ----------------------
-    # 拖曳
+    
+       # ----------------------
+    # 滑鼠按下
     # ----------------------
 
     def mousePressEvent(self, event):
 
         if event.button() == Qt.LeftButton:
 
+            # 更新互動時間
+            self.lastInteraction = time.time()
+
+            # 醒來
+            if self.isSleeping:
+                self.isSleeping = False
+                self.animation.breathe()
+
+            # 拖曳起點
             self.dragPos = (
                 event.globalPosition().toPoint()
                 - self.frameGeometry().topLeft()
             )
+
+            # 動畫
+            self.animation.jump()
+
+            # 說話
+            self.say()
+
+        super().mousePressEvent(event)
+
+    # ----------------------
+    # 拖曳
+    # ----------------------
 
     def mouseMoveEvent(self, event):
 
@@ -110,6 +153,10 @@ class DesktopPet(QLabel):
                 event.globalPosition().toPoint()
                 - self.dragPos
             )
+
+    # ----------------------
+    # 放開滑鼠
+    # ----------------------
 
     def mouseReleaseEvent(self, event):
 
@@ -137,7 +184,7 @@ class DesktopPet(QLabel):
 
         self.updatePixmap()
 
-            # ----------------------
+    # ----------------------
     # 右鍵選單
     # ----------------------
 
@@ -162,17 +209,21 @@ class DesktopPet(QLabel):
         if action == zoomIn:
 
             self.scale = min(3.0, self.scale + 0.1)
+
             self.updatePixmap()
 
             self.data["scale"] = self.scale
+
             config.save(self.data)
 
         elif action == zoomOut:
 
             self.scale = max(0.4, self.scale - 0.1)
+
             self.updatePixmap()
 
             self.data["scale"] = self.scale
+
             config.save(self.data)
 
         elif action == resetPos:
@@ -186,11 +237,9 @@ class DesktopPet(QLabel):
 
         elif action == quitAction:
 
-            self.close()
+            QApplication.quit()
 
-   
-
-            # ----------------------
+         # ----------------------
     # 說話
     # ----------------------
 
@@ -205,16 +254,26 @@ class DesktopPet(QLabel):
         )
 
     # ----------------------
-    # 左鍵互動
+    # 睡覺檢查
     # ----------------------
 
-    def mouseDoubleClickEvent(self, event):
+    def checkSleep(self):
 
-        if event.button() == Qt.LeftButton:
+        if self.isSleeping:
+            return
 
-            self.animation.jump()
+        # 測試用：30 秒沒互動就睡覺
+        if time.time() - self.lastInteraction > 30:
 
-            self.say()
+            self.isSleeping = True
+
+            self.animation.sleep()
+
+            self.bubble.showText(
+                "Zzz...",
+                self.x() + self.width() // 2,
+                self.y()
+            )
 
     # ----------------------
     # 關閉時儲存
