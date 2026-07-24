@@ -10,15 +10,14 @@ from PySide6.QtGui import (
 
 from PySide6.QtCore import (
     Qt,
-    QPoint,
-    QPropertyAnimation,
-    QEasingCurve
+    QPoint
 )
 
 import random
 
 import config
 from bubble import Bubble
+from animation import PetAnimation
 
 
 class DesktopPet(QLabel):
@@ -38,7 +37,7 @@ class DesktopPet(QLabel):
         self.bubble = Bubble()
 
         # 動畫
-        self.jumpAnim = None
+        self.animation = PetAnimation(self)
 
         # 拖曳
         self.dragPos = QPoint()
@@ -189,32 +188,7 @@ class DesktopPet(QLabel):
 
             self.close()
 
-    # ----------------------
-    # 跳躍動畫
-    # ----------------------
-
-    def jump(self):
-
-        start = self.pos()
-
-        self.jumpAnim = QPropertyAnimation(self, b"pos")
-
-        self.jumpAnim.setDuration(450)
-
-        self.jumpAnim.setStartValue(start)
-
-        self.jumpAnim.setKeyValueAt(
-            0.5,
-            QPoint(start.x(), start.y() - 80)
-        )
-
-        self.jumpAnim.setEndValue(start)
-
-        self.jumpAnim.setEasingCurve(
-            QEasingCurve.OutBounce
-        )
-
-        self.jumpAnim.start()
+   
 
             # ----------------------
     # 說話
@@ -238,7 +212,7 @@ class DesktopPet(QLabel):
 
         if event.button() == Qt.LeftButton:
 
-            self.jump()
+            self.animation.jump()
 
             self.say()
 
